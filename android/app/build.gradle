@@ -81,20 +81,44 @@ def enableSeparateBuildPerCPUArchitecture = false
 /**
  * Run Proguard to shrink the Java bytecode in release builds.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
+
+def getPassword(String currentUser, String keyChain) {
+    def stdout = new ByteArrayOutputStream()
+    def stderr = new ByteArrayOutputStream()
+    exec {
+        commandLine 'security', '-q', 'find-generic-password', '-a', currentUser, '-s', keyChain, '-w'
+        standardOutput = stdout
+        errorOutput = stderr
+        ignoreExitValue true
+    }
+    //noinspection GroovyAssignabilityCheck
+    stdout.toString().trim()
+}
+
+def pass = getPassword("mobile-dev@mattermost.com","mattermost_keystroke")
 
 android {
     compileSdkVersion 23
     buildToolsVersion "23.0.1"
 
     defaultConfig {
-        applicationId "com.mattermost"
+        applicationId "com.mattermost.react.native"
         minSdkVersion 16
-        targetSdkVersion 22
-        versionCode 1
+        targetSdkVersion 23
+        versionCode 2
         versionName "1.0"
+        multiDexEnabled true
         ndk {
             abiFilters "armeabi-v7a", "x86"
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file("../keystores/"+MYAPP_RELEASE_STORE_FILE)
+            storePassword pass
+            keyAlias MYAPP_RELEASE_KEY_ALIAS
+            keyPassword pass
         }
     }
     splits {
@@ -109,6 +133,7 @@ android {
         release {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            signingConfig signingConfigs.release
         }
     }
     // applicationVariants are e.g. debug, release
@@ -127,15 +152,16 @@ android {
 }
 
 dependencies {
+    compile project(':react-native-vector-icons')
     compile project(':react-native-svg')
     compile fileTree(dir: "libs", include: ["*.jar"])
-    compile "com.android.support:appcompat-v7:23.0.1"
+//    compile "com.android.support:appcompat-v7:23.0.1"
     compile "com.facebook.react:react-native:+"  // From node_modules
 }
 
 // Run this once to be able to run the application with BUCK
 // puts all compile dependencies into folder libs for BUCK to use
 task copyDownloadableDepsToLibs(type: Copy) {
-  from configurations.compile
-  into 'libs'
+    from configurations.compile
+    into 'libs'
 }
