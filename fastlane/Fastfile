@@ -6,7 +6,7 @@ platform :ios do
   before_all do |lane|
     if lane == :beta or lane == :release
       ensure_git_branch(
-          branch: 'fastlane'
+          branch: 'master'
       )
       sh "git checkout -b ios-#{lane}"
     end
@@ -14,8 +14,11 @@ platform :ios do
 
   after_all do |lane|
     if lane == :beta or lane == :release
-      reset_git_repo(force: true)
-      sh 'git checkout fastlane'
+      reset_git_repo(
+          force: true,
+          skip_clean: true
+      )
+      sh 'git checkout master'
       sh "git branch -D ios-#{lane}"
     end
   end
@@ -35,27 +38,27 @@ platform :ios do
   desc 'Submit a new Beta Build to Apple TestFlight'
   desc 'This will also make sure the profile is up to date'
   lane :beta do
-    # match(type: 'appstore')
-    #
-    # build_ios({
-    #           release: true,
-    #           increment_build: true,
-    #           ensure_git_status_clean: true,
-    #           branch_name: 'ios-beta'
-    #       })
+    match(type: 'appstore')
 
-    # pilot
+    build_ios({
+              release: true,
+              increment_build: true,
+              ensure_git_status_clean: true,
+              branch_name: 'ios-beta'
+          })
 
-    # if ENV['MATTERMOST_URL']
-    #   testflight_url = ENV['TESTFLIGHT_URL']
-    #   send_message_for_ios(
-    #       '#### New iOS beta published on TestFlight',
-    #       '',
-    #       "#ios-beta in #{testflight_url.nil? ? 'TestFlight' : "[TestFlight](#{testflight_url})"} on [#{Time.new.utc.to_s}]",
-    #       [],
-    #       true
-    #   )
-    # end
+    pilot
+
+    if ENV['MATTERMOST_URL']
+      testflight_url = ENV['TESTFLIGHT_URL']
+      send_message_for_ios(
+          '#### New iOS beta published on TestFlight',
+          '',
+          "#ios-beta in #{testflight_url.nil? ? 'TestFlight' : "[TestFlight](#{testflight_url})"} on [#{Time.new.utc.to_s}]",
+          [],
+          true
+      )
+    end
   end
 
   desc 'Deploy a new version to the App Store'
@@ -107,7 +110,7 @@ platform :ios do
       commit = last_git_commit
 
       push_to_git_remote(
-          remote: 'backup',
+          remote: 'origin',
           local_branch: options[:branch_name],
           force: false,
           tags: false
@@ -116,20 +119,20 @@ platform :ios do
       unless ENV['GITHUB_TOKEN'].nil?
         create_pull_request(
             api_token: ENV['GITHUB_TOKEN'],
-            repo: 'enahum/mattermost-mobile',
-            head: "enahum:#{options[:branch_name]}",
+            repo: 'mattermost/mattermost-mobile',
+            head: "mattermost:#{options[:branch_name]}",
             base: 'master',
             title: "IOS #{commit[:message]}"
         )
       end
     end
 
-    # gym(
-    #     clean: true,
-    #     scheme: 'Mattermost',
-    #     configuration: (options[:release] ? 'Release' : 'Debug'),
-    #     project: './ios/Mattermost.xcodeproj'
-    # )
+    gym(
+        clean: true,
+        scheme: 'Mattermost',
+        configuration: (options[:release] ? 'Release' : 'Debug'),
+        project: './ios/Mattermost.xcodeproj'
+    )
   end
 
   def send_message_for_ios(pretext, title, msg, default_payloads, success)
@@ -170,7 +173,7 @@ platform :android do
   before_all do |lane|
     if lane == :beta or lane == :release
       ensure_git_branch(
-          branch: 'fastlane'
+          branch: 'master'
       )
       sh "git checkout -b android-#{lane}"
     end
@@ -178,7 +181,12 @@ platform :android do
 
   after_all do |lane|
     if lane == :beta or lane == :release
-      reset_git_repo(force: true)
+      reset_git_repo(
+          force: true,
+          skip_clean: true
+      )
+      sh 'git checkout master'
+      sh "git branch -D android-#{lane}"
     end
   end
 
@@ -192,13 +200,14 @@ platform :android do
     build_android({
         release: true,
         increment_build: true,
-        ensure_git_status_clean: true
+        ensure_git_status_clean: true,
+        branch_name: 'android-beta'
           })
 
-    # supply(
-    #     track: 'beta',
-    #     apk: "#{lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]}",
-    # )
+    supply(
+        track: 'beta',
+        apk: "#{lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]}",
+    )
 
     if ENV['MATTERMOST_URL']
       beta_url = ENV['GOOGLE_PLAY_BETA_URL']
@@ -217,7 +226,8 @@ platform :android do
     build_android({
         release: true,
         increment_build: true,
-        ensure_git_status_clean: true
+        ensure_git_status_clean: true,
+        branch_name: 'android-release'
           })
 
     supply(
@@ -256,11 +266,20 @@ platform :android do
       )
       commit = last_git_commit
 
+      push_to_git_remote(
+          remote: 'origin',
+          local_branch: options[:branch_name],
+          force: false,
+          tags: false
+      )
+
       unless ENV['GITHUB_TOKEN'].nil?
         create_pull_request(
             api_token: ENV['GITHUB_TOKEN'],
-            repo: 'enahum/mattermost-mobile',
-            title: "Android #{commit[:message]}"
+            repo: 'mattermost/mattermost-mobile',
+            head: "mattermost:#{options[:branch_name]}",
+            base: 'master',
+            title: "IOS #{commit[:message]}"
         )
       end
     end

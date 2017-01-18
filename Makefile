@@ -126,6 +126,7 @@ ifneq ($(android_target), $(filter $(android_target), dev beta release))
 endif
 
 prepare-android-build:
+	@rm -rf ./node_modules/react-native/local-cli/templates/HelloWorld
 	@sed -i'' -e 's|def devEnabled = !targetName.toLowerCase().contains("release")|def devEnabled = true|g' ./node_modules/react-native/react.gradle
 
 do-build-android:
@@ -134,7 +135,7 @@ do-build-android:
 
 after-android-build:
 	@echo Cleaning up
-	@sed -i'' -e 's|def devEnabled = true|def devEnabled = !targetName.toLowerCase().contains("release")|g' ../node_modules/react-native/react.gradle
+	@sed -i'' -e 's|def devEnabled = true|def devEnabled = !targetName.toLowerCase().contains("release")|g' ./node_modules/react-native/react.gradle
 
 build-android: | check-android-target pre-run check-style prepare-android-build do-build-android after-android-build
 
